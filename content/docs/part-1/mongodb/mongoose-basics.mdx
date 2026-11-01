@@ -1,0 +1,158 @@
+---
+title: MongoDB & Mongoose Basics
+description: Connecting to MongoDB, defining schemas and models, and CRUD and query operations with Mongoose.
+---
+
+> **Source:** `5. mongodb-basics/app.js`
+
+## Concepts
+
+**MongoDB** is a NoSQL, document database. Data is stored as JSON-like **documents** inside **collections**.
+
+| SQL      | MongoDB    |
+| -------- | ---------- |
+| Database | Database   |
+| Table    | Collection |
+| Row      | Document   |
+| Column   | Field      |
+
+**Mongoose** is an ODM (Object Data Modeling) library. It adds **schemas**, **validation** and a nice query API on top of MongoDB.
+
+```bash
+npm i mongoose
+```
+
+<Callout>
+  The course uses **MongoDB Atlas** (free cloud cluster). Create a cluster, add a database user,
+  allow your IP, then copy the `mongodb+srv://...` connection string.
+</Callout>
+
+## Connect
+
+```js
+const mongoose = require("mongoose");
+
+mongoose
+  .connect(process.env.MONGO_URI) // mongodb+srv://<user>:<password>@<cluster>.mongodb.net/
+  .then(() => console.log("database connected successfully"))
+  .catch((e) => console.log(e));
+```
+
+<Callout type="warn" title="Never hard-code credentials">
+  Keep the connection string in a `.env` file (`MONGO_URI=...`), load it with `dotenv`, and add
+  `.env` to `.gitignore`.
+</Callout>
+
+## Schema & model
+
+```js
+const userSchema = new mongoose.Schema({
+  name: String,
+  email: String,
+  age: Number,
+  isActive: Boolean,
+  tags: [String],
+  createdAt: { type: Date, default: Date.now },
+});
+
+// create user model → collection "users"
+const User = mongoose.model("User", userSchema);
+```
+
+- **Schema** = the shape of a document (fields, types, defaults, validation).
+- **Model** = a class built from the schema that you use to query the collection.
+
+## Create
+
+<Tabs items={["Model.create()", "new Model() + save()"]}>
+<Tab value="Model.create()">
+
+```js
+const newUser = await User.create({
+  name: "Updated User",
+  email: "updated@gmail.com",
+  age: "75", // cast to Number by the schema
+  isActive: true,
+  tags: ["developer"],
+});
+```
+
+</Tab>
+<Tab value="new Model() + save()">
+
+```js
+const newUser = new User({
+  name: "Raj Mukherjee",
+  email: "raj@gmail.com",
+  age: "40",
+  isActive: true,
+  tags: ["developer", "designer", "manager"],
+});
+await newUser.save();
+```
+
+</Tab>
+</Tabs>
+
+## Read & query
+
+```js
+const allUsers = await User.find({});                         // all documents
+const activeUsers = await User.find({ isActive: true });      // filter
+const johnDoe = await User.findOne({ name: "John Doe" });     // first match
+const byId = await User.findById(newUser._id);                // by _id
+
+const selectedFields = await User.find().select("name email -_id"); // projection
+const limitedUsers = await User.find().limit(5).skip(1);            // pagination
+const sortedUsers = await User.find().sort({ age: 1 });             // 1 asc, -1 desc
+
+const count = await User.countDocuments({ isActive: true });
+```
+
+| Method / modifier       | Purpose                                          |
+| ----------------------- | ------------------------------------------------ |
+| `find(filter)`          | Array of matching docs                           |
+| `findOne(filter)`       | First matching doc or `null`                     |
+| `findById(id)`          | Doc by `_id` or `null`                           |
+| `.select("a b -_id")`   | Include/exclude fields (`-` excludes)            |
+| `.limit(n)` / `.skip(n)`| Pagination                                       |
+| `.sort({ field: 1 })`   | Sorting                                          |
+| `countDocuments(filter)`| Count                                            |
+
+## Update & delete
+
+```js
+const updateUser = await User.findByIdAndUpdate(
+  newUser._id,
+  {
+    $set: { age: 100 },          // set a field
+    $push: { tags: "updated" },  // push into an array
+  },
+  { new: true } // return the UPDATED document (default returns the old one)
+);
+
+const deletedUser = await User.findByIdAndDelete(newUser._id);
+```
+
+## Full script pattern
+
+```js
+async function runQueryExamples() {
+  try {
+    // ...queries...
+  } catch (e) {
+    console.log("Error ->", e);
+  } finally {
+    await mongoose.connection.close(); // close the connection when the script ends
+  }
+}
+
+runQueryExamples();
+```
+
+## Quick recap
+
+- `mongoose.connect(uri)` → `new Schema({...})` → `mongoose.model("Name", schema)`
+- Create: `create` or `new` + `save`. Read: `find`, `findOne`, `findById`.
+- Update: `findByIdAndUpdate(id, update, { new: true })`. Delete: `findByIdAndDelete`.
+- Chain `.select()`, `.sort()`, `.skip()`, `.limit()` on queries.

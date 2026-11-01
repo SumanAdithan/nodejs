@@ -1,0 +1,125 @@
+---
+title: Express & Mongoose with TypeScript
+description: Typing Express requests, responses and middleware, extending Request, and typed Mongoose models.
+---
+
+> **Source:** `11. nodejs-with-typescript` (`src/app.ts`, `src/models/User.ts`)
+
+```bash
+npm i express mongoose
+npm i -D typescript ts-node nodemon @types/node @types/express
+```
+
+## Typed Mongoose model
+
+```ts title="src/models/User.ts"
+import mongoose, { Schema, Document } from "mongoose";
+
+interface IUser extends Document {
+  name: string;
+  email: string;
+  age: number;
+  createdAt: Date;
+}
+
+const UserSchema = new Schema<IUser>({
+  name: String,
+  email: String,
+  age: Number,
+  createdAt: Date,
+});
+
+const User = mongoose.model<IUser>("User", UserSchema);
+
+export { User, IUser };
+```
+
+The interface describes a document. `Schema<IUser>` and `model<IUser>` make queries return typed results.
+
+## Express app
+
+```ts title="src/app.ts"
+import express, { Express, Request, Response, NextFunction } from "express";
+import { IUser, User } from "./models/User";
+
+const app: Express = express();
+const port = 3000;
+
+app.use(express.json());
+
+// extend Request to add custom properties
+interface CustomRequest extends Request {
+  startTime?: number;
+}
+
+// middleware: add startTime to request
+app.use((req: CustomRequest, res: Response, next: NextFunction) => {
+  req.startTime = Date.now();
+  next();
+});
+
+app.get("/", (req: Request, res: Response) => {
+  res.send("Hello. Typescript with express");
+});
+
+app.get("/users", async (req: Request, res: Response) => {
+  try {
+    const users: IUser[] = await User.find();
+    res.json(users);
+  } catch (e) {
+    res.status(400).json({ message: "Some error occured!" });
+  }
+});
+
+// typed request body: Request<Params, ResBody, ReqBody, Query>
+interface UserBody {
+  name: string;
+  email: string;
+}
+
+app.post("/user", (req: Request<{}, {}, UserBody>, res: Response) => {
+  const { name, email } = req.body; // typed!
+  res.json({ message: `User created ${name}-${email}` });
+});
+
+// typed route params
+app.get("/users/:id", (req: Request<{ id: string }>, res: Response) => {
+  const { id } = req.params; // string
+  res.json({ userId: id });
+});
+
+app.listen(port, () => {
+  console.log(`Server is now running on port ${port}`);
+});
+```
+
+## Express type cheatsheet
+
+| Type                     | Use                                         |
+| ------------------------ | ------------------------------------------- |
+| `Express`                | The `app` instance                          |
+| `Request`, `Response`    | Handler parameters                          |
+| `NextFunction`           | `next` in middleware                        |
+| `Request<P, ResB, ReqB, Q>` | Generics: **P**arams, **Res**ponse **B**ody, **Req**uest **B**ody, **Q**uery |
+| `interface X extends Request` | Add custom fields (e.g. `startTime`, `userInfo`) |
+
+<Callout title="Notes vs. original source">
+  The original `/users` route fetches users but never sends a response, so the request hangs. The
+  version above adds `res.json(users)`. The body interface is renamed to `UserBody` here so it
+  doesn't clash with the imported `User` model.
+</Callout>
+
+## Run
+
+```bash
+npm run dev     # nodemon + ts-node on src/app.ts
+npm run build   # tsc → dist/
+npm start       # node dist/app.js
+```
+
+## Quick recap
+
+- Install `@types/express` and `@types/node` for typings.
+- Type handlers with `(req: Request, res: Response)` and middleware with `NextFunction`.
+- `Request<{ id: string }>` for params, `Request<{}, {}, Body>` for body.
+- Mongoose: `interface IUser extends Document`, `Schema<IUser>`, `model<IUser>`.

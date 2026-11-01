@@ -1,0 +1,114 @@
+---
+title: GraphQL with Mongoose
+description: Replacing in-memory data with MongoDB by calling Mongoose models from async resolvers.
+---
+
+> **Source:** `10. nodejs-graphql/2. mongoose-integration`
+
+Same schema as [GraphQL Basics](/docs/part-1/graphql/graphql-basics). Only the **resolvers** change: they now call a Mongoose model instead of an array.
+
+```bash
+npm i @apollo/server graphql graphql-tag mongoose dotenv
+```
+
+```ini title=".env"
+PORT=4000
+MONGO_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/
+```
+
+## Model & DB connection
+
+```js title="src/models/Product.js"
+const mongoose = require("mongoose");
+
+const ProductSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  category: { type: String, required: true },
+  price: { type: Number, required: true },
+  inStock: { type: Boolean, required: true },
+});
+
+module.exports = mongoose.model("product", ProductSchema);
+```
+
+```js title="src/database/db.js"
+const mongoose = require("mongoose");
+
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log("Mongodb connected successfully");
+  } catch (e) {
+    console.error("Mongo connection failed!", e);
+    process.exit(1);
+  }
+};
+
+module.exports = connectDB;
+```
+
+## Async resolvers
+
+```js title="src/graphql/resolvers.js"
+const Product = require("../models/Product");
+
+const resolvers = {
+  Query: {
+    products: async () => await Product.find({}),
+    product: async (_, { id }) => await Product.findById(id),
+  },
+
+  Mutation: {
+    createProduct: async (_, args) => {
+      const newlyCreatedProduct = new Product(args);
+      return await newlyCreatedProduct.save();
+    },
+
+    updateProduct: async (_, { id, ...updatedFields }) => {
+      return await Product.findByIdAndUpdate(id, updatedFields, { new: true });
+    },
+
+    deleteProduct: async (_, { id }) => {
+      const deletedProduct = await Product.findByIdAndDelete(id);
+      return !!deletedProduct; // convert to Boolean
+    },
+  },
+};
+
+module.exports = resolvers;
+```
+
+<Callout>
+  The schema's `id: ID!` works with Mongoose because documents have a virtual `id` getter, which
+  is `_id` as a string.
+</Callout>
+
+## Server (connect first)
+
+```js title="src/server.js"
+require("dotenv").config();
+const { ApolloServer } = require("@apollo/server");
+const { startStandaloneServer } = require("@apollo/server/standalone");
+const connectDB = require("./database/db");
+const typeDefs = require("./graphql/schema");
+const resolvers = require("./graphql/resolvers");
+
+async function startServer() {
+  await connectDB();
+  const server = new ApolloServer({ typeDefs, resolvers });
+
+  const { url } = await startStandaloneServer(server, {
+    listen: { port: process.env.PORT },
+  });
+
+  console.log(`Server ready at: ${url}`);
+}
+
+startServer();
+```
+
+## Quick recap
+
+- Keep the same typeDefs. Resolvers become `async` and call Mongoose.
+- `findByIdAndUpdate(id, fields, { new: true })` returns the updated doc.
+- `!!doc` turns "found or not" into the schema's `Boolean`.

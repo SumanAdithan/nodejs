@@ -1,0 +1,1 @@
+{ "title": "MongoDB & Mongoose", "icon": "Database", "pages": ["mongoose-basics", "bookstore-api", "intermediate-and-aggregation"] }

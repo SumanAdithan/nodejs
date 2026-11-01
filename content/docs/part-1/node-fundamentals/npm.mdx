@@ -1,0 +1,78 @@
+---
+title: Node Package Manager (npm)
+description: Initializing a project, installing packages, package.json and npm scripts.
+---
+
+> **Source:** `1. node-tutorial/3. node-package-manager`
+
+## What is npm?
+
+**npm** comes with Node.js. It's used to:
+
+- install third-party packages from the npm registry
+- manage project dependencies (`package.json`)
+- run project scripts (`npm start`, `npm run dev`)
+
+## Common commands
+
+```bash
+npm init -y              # create package.json with defaults
+npm install lodash       # add a dependency (alias: npm i lodash)
+npm install -D nodemon   # add a dev dependency
+npm uninstall lodash     # remove a package
+npm install              # install everything listed in package.json
+npm start                # run the "start" script
+npm run dev              # run any other script by name
+```
+
+## package.json
+
+```json title="package.json"
+{
+  "name": "3.-node-package-manager",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "lodash": "^4.17.21"
+  }
+}
+```
+
+| Field             | Purpose                                                       |
+| ----------------- | ------------------------------------------------------------- |
+| `main`            | Entry file of the project                                     |
+| `scripts`         | Command shortcuts run with `npm start` / `npm run <name>`     |
+| `dependencies`    | Packages needed at runtime                                    |
+| `devDependencies` | Packages needed only during development (e.g. `nodemon`)      |
+
+<Callout>
+  - `node_modules/` holds the installed packages. Don't commit it (add it to `.gitignore`).
+  - `package-lock.json` locks exact versions. Commit it.
+  - `^4.17.21` means "any compatible `4.x.x` version at or above 4.17.21".
+</Callout>
+
+## Using an installed package
+
+```js title="index.js"
+const lodash = require("lodash");
+
+const names = ["sangam", "john", "terry", "alex", "mia"];
+const capitalize = lodash.map(names, lodash.capitalize);
+
+console.log(capitalize); // [ 'Sangam', 'John', 'Terry', 'Alex', 'Mia' ]
+```
+
+```bash
+npm start
+```
+
+## Quick recap
+
+- `npm init -y` → `npm i <pkg>` → `require("<pkg>")`.
+- Use `-D` for dev-only tools.
+- Define scripts in `package.json` and run them with `npm run <name>`.

@@ -1,0 +1,113 @@
+---
+title: Node Module System
+description: Splitting code into files with module.exports and require (CommonJS), and the module wrapper.
+---
+
+> **Source:** `1. node-tutorial/2. node-module-system`
+
+## The idea
+
+Every file in Node.js is a **module** with its own scope. Variables and functions stay private unless you **export** them.
+
+- `module.exports`: what a file exposes
+- `require(path)`: imports another module's exports
+
+## Exporting
+
+```js title="first-module.js"
+function add(a, b) {
+  return a + b;
+}
+
+function substract(a, b) {
+  return a - b;
+}
+
+function divide(a, b) {
+  if (b === 0) {
+    throw new Error("Divide by zero is not allowed");
+  }
+  return a / b;
+}
+
+module.exports = {
+  add,
+  substract,
+  divide,
+};
+```
+
+## Importing
+
+```js title="index.js"
+const firstModule = require("./first-module");
+
+console.log(firstModule.add(10, 20)); // 30
+
+try {
+  console.log("trying to divide by zero");
+  let result = firstModule.divide(0, 10);
+  console.log(result, "result");
+} catch (error) {
+  console.log("Caught an error", error.message);
+}
+```
+
+<Callout>
+  Local files need a relative path (`./first-module`). The `.js` extension is optional. Built-in
+  and npm modules use just the name (`require("fs")`, `require("lodash")`).
+</Callout>
+
+## The module wrapper
+
+Before running your file, Node wraps it in a function like this:
+
+```js
+(function (exports, require, module, __filename, __dirname) {
+  // your module code goes here
+});
+```
+
+That's why every module has its own scope, and why these work without importing them:
+
+| Variable     | Meaning                                       |
+| ------------ | --------------------------------------------- |
+| `exports`    | Shortcut reference to `module.exports`        |
+| `require`    | Function to import modules                    |
+| `module`     | The current module object                     |
+| `__filename` | Absolute path of the current file             |
+| `__dirname`  | Absolute path of the folder holding the file  |
+
+```js title="wrapper-explorer.js"
+console.log("Node module wrapper demo");
+
+console.log("__filename in wrapper explorer", __filename);
+console.log("__dirname in wrapper explorer", __dirname);
+
+module.exports.greet = function (name) {
+  console.log(`Hello ${name}`);
+};
+```
+
+```js title="wrapper-demo.js"
+const wrapperExplorer = require("./wrapper-explorer");
+
+console.log(`in wrapper demo.js file`);
+
+console.log("__filename in wrapper demo", __filename);
+console.log("__dirname in wrapper demo", __dirname);
+
+wrapperExplorer.greet("Sangam Mukherjee");
+```
+
+<Callout title="Note">
+  The code in a required module runs once, the first time it's required. So
+  `wrapper-explorer.js`'s logs print **before** `wrapper-demo.js`'s logs.
+</Callout>
+
+## Quick recap
+
+- One file = one module with its own scope.
+- Export with `module.exports = {...}` or `module.exports.name = ...`.
+- Import with `require("./path")`.
+- `__filename` and `__dirname` come from the module wrapper.

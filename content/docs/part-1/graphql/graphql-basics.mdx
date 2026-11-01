@@ -1,0 +1,216 @@
+---
+title: GraphQL Basics (Apollo Server)
+description: Schemas, types, queries, mutations and resolvers with Apollo Server and in-memory data.
+---
+
+> **Source:** `10. nodejs-graphql/1. basics`
+
+## GraphQL vs REST
+
+| REST                                      | GraphQL                                     |
+| ----------------------------------------- | ------------------------------------------- |
+| Many endpoints (`/products`, `/products/:id`) | **One** endpoint (`/graphql`)           |
+| Server decides the response shape         | **Client** asks for exactly the fields it needs |
+| GET / POST / PUT / DELETE                 | **Query** (read) and **Mutation** (write)   |
+
+```bash
+npm i @apollo/server graphql graphql-tag
+npm i -D nodemon
+```
+
+## Structure
+
+<Files>
+  <Folder name="src" defaultOpen>
+    <Folder name="data" defaultOpen>
+      <File name="products.js" />
+    </Folder>
+    <Folder name="graphql" defaultOpen>
+      <File name="schema.js" />
+      <File name="resolvers.js" />
+    </Folder>
+    <File name="server.js" />
+  </Folder>
+</Files>
+
+| File           | Role                                                      |
+| -------------- | --------------------------------------------------------- |
+| `schema.js`    | **typeDefs**: the shape of the data and the available operations |
+| `resolvers.js` | Functions that actually fetch or modify data for each operation |
+| `server.js`    | Creates and starts the Apollo server                      |
+
+## 1. Schema (typeDefs)
+
+**Scalar types:** `String`, `Int`, `Float`, `Boolean`, `ID` (unique identifier). A trailing `!` means **required / non-null**, and `[Type]` means a list.
+
+```js title="src/graphql/schema.js"
+const { gql } = require("graphql-tag");
+
+const typeDefs = gql`
+  type Product {
+    id: ID!
+    title: String!
+    category: String!
+    price: Float!
+    inStock: Boolean!
+  }
+
+  type Query {
+    products: [Product!]!
+    product(id: ID!): Product
+  }
+
+  type Mutation {
+    createProduct(title: String!, category: String!, price: Float!, inStock: Boolean!): Product
+    deleteProduct(id: ID!): Boolean
+    updateProduct(
+      id: ID!
+      title: String
+      category: String
+      price: Float
+      inStock: Boolean
+    ): Product
+  }
+`;
+
+module.exports = typeDefs;
+```
+
+## 2. Data
+
+```js title="src/data/products.js"
+const products = [
+  { id: "1", title: "Laptop", category: "Electronics", price: 990.95, inStock: true },
+  { id: "2", title: "Coffee", category: "Food", price: 50.95, inStock: true },
+  { id: "3", title: "Shoes", category: "Sports", price: 1990.95, inStock: false },
+];
+
+module.exports = products;
+```
+
+## 3. Resolvers
+
+Resolver signature: `(parent, args, context, info)`. Here we only need `args`, so the first parameter is `_`.
+
+```js title="src/graphql/resolvers.js"
+const products = require("../data/products");
+
+const resolvers = {
+  Query: {
+    products: () => products,
+    product: (_, { id }) => products.find((item) => item.id === id),
+  },
+
+  Mutation: {
+    createProduct: (_, { title, category, price, inStock }) => {
+      const newlyCreatedProduct = {
+        id: String(products.length + 1),
+        title,
+        category,
+        price,
+        inStock,
+      };
+      products.push(newlyCreatedProduct);
+      return newlyCreatedProduct;
+    },
+
+    deleteProduct: (_, { id }) => {
+      const index = products.findIndex((product) => product.id === id);
+      if (index === -1) return false;
+      products.splice(index, 1);
+      return true;
+    },
+
+    updateProduct: (_, { id, ...updates }) => {
+      const index = products.findIndex((product) => product.id === id);
+      if (index === -1) return null;
+
+      const updatedProduct = { ...products[index], ...updates };
+      products[index] = updatedProduct;
+      return updatedProduct;
+    },
+  },
+};
+
+module.exports = resolvers;
+```
+
+<Callout>Resolver names must match the field names in `type Query` / `type Mutation` exactly.</Callout>
+
+## 4. Server
+
+```js title="src/server.js"
+const { ApolloServer } = require("@apollo/server");
+const { startStandaloneServer } = require("@apollo/server/standalone");
+const typeDefs = require("./graphql/schema");
+const resolvers = require("./graphql/resolvers");
+
+async function startServer() {
+  const server = new ApolloServer({ typeDefs, resolvers });
+
+  const { url } = await startStandaloneServer(server, {
+    listen: { port: 4000 },
+  });
+
+  console.log(`Server ready at: ${url}`);
+}
+
+startServer();
+```
+
+Open `http://localhost:4000` to use **Apollo Sandbox** and run operations.
+
+## Example operations
+
+<Tabs items={["Queries", "Mutations"]}>
+<Tab value="Queries">
+
+```graphql
+query GetAllProducts {
+  products {
+    id
+    title
+    price
+  }
+}
+
+query GetProduct {
+  product(id: "1") {
+    title
+    category
+    inStock
+  }
+}
+```
+
+</Tab>
+<Tab value="Mutations">
+
+```graphql
+mutation Create {
+  createProduct(title: "Phone", category: "Electronics", price: 499.99, inStock: true) {
+    id
+    title
+  }
+}
+
+mutation Update {
+  updateProduct(id: "1", price: 899.99) {
+    id
+    price
+  }
+}
+
+mutation Delete {
+  deleteProduct(id: "2")
+}
+```
+
+</Tab>
+</Tabs>
+
+## Quick recap
+
+- **typeDefs** describe types and operations. **resolvers** implement them.
+- `Query` = reads, `Mutation` = writes. `!` = non-null.
+- `new ApolloServer({ typeDefs, resolvers })` plus `startStandaloneServer`.

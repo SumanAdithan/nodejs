@@ -1,0 +1,200 @@
+---
+title: File Upload (Multer + Cloudinary)
+description: Accepting image uploads with Multer, storing them on Cloudinary, and saving the URL in MongoDB.
+---
+
+> **Source:** `7. nodejs-auth` (`middleware/upload-middleware.js`, `config/cloudinary.js`, `helpers/cloudinaryHelper.js`, `models/Image.js`, `controllers/image-controller.js`)
+
+## The flow
+
+<Steps>
+<Step>The client sends `multipart/form-data` with an `image` field.</Step>
+<Step>**Multer** checks the file (type, size) and saves it temporarily to `uploads/`. The file info is on `req.file`.</Step>
+<Step>The controller uploads `req.file.path` to **Cloudinary** and gets back `secure_url` and `public_id`.</Step>
+<Step>The URL, publicId and uploader's id are saved in MongoDB (`Image` model).</Step>
+</Steps>
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as auth + admin middleware
+    participant M as Multer
+    participant Ctrl as uploadImageController
+    participant CL as Cloudinary
+    participant DB as MongoDB
+
+    C->>A: POST /api/image/upload (form-data: image) + Bearer token
+    A->>A: verify JWT, check role is admin
+    A->>M: next()
+    M->>M: fileFilter (image only) and 5MB limit
+    M->>M: save to uploads/ and set req.file
+    M->>Ctrl: next()
+    Ctrl->>CL: uploader.upload(req.file.path)
+    CL-->>Ctrl: secure_url, public_id
+    Ctrl->>DB: save Image (url, publicId, uploadedBy)
+    Ctrl-->>C: 201 Image uploaded
+```
+
+## 1. Multer middleware
+
+```js title="middleware/upload-middleware.js"
+const multer = require("multer");
+const path = require("path");
+
+// set our multer storage
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "uploads/");
+  },
+  filename: function (req, file, cb) {
+    cb(null, file.fieldname + "-" + Date.now() + path.extname(file.originalname));
+  },
+});
+
+// file filter function
+const checkFileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith("image")) {
+    cb(null, true);
+  } else {
+    cb(new Error("Not an image! Please upload only images"));
+  }
+};
+
+// multer middleware
+module.exports = multer({
+  storage: storage,
+  fileFilter: checkFileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB file size limit
+  },
+});
+```
+
+| Option         | Purpose                                         |
+| -------------- | ----------------------------------------------- |
+| `diskStorage`  | Where and under what name to save files         |
+| `fileFilter`   | Accept (`cb(null, true)`) or reject files       |
+| `limits.fileSize` | Max size in bytes                            |
+| `.single("image")` | Accept one file from the field `image` → `req.file` |
+
+<Callout type="warn">The `uploads/` folder must exist, or Multer will throw an error.</Callout>
+
+## 2. Cloudinary config & helper
+
+```js title="config/cloudinary.js"
+const cloudinary = require("cloudinary").v2;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+module.exports = cloudinary;
+```
+
+```js title="helpers/cloudinaryHelper.js"
+const cloudinary = require("../config/cloudinary");
+
+const uploadToCloudinary = async (filePath) => {
+  try {
+    const result = await cloudinary.uploader.upload(filePath);
+    return {
+      url: result.secure_url,
+      publicId: result.public_id, // needed later to delete the image
+    };
+  } catch (error) {
+    console.error("Error while uploading to cloudinary", error);
+    throw new Error("Error while uploading to cloudinary");
+  }
+};
+
+module.exports = { uploadToCloudinary };
+```
+
+## 3. Image model
+
+```js title="models/Image.js"
+const mongoose = require("mongoose");
+
+const ImageSchema = new mongoose.Schema(
+  {
+    url: { type: String, required: true },
+    publicId: { type: String, required: true },
+    uploadedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("Image", ImageSchema);
+```
+
+## 4. Upload controller
+
+```js title="controllers/image-controller.js"
+const Image = require("../models/Image");
+const { uploadToCloudinary } = require("../helpers/cloudinaryHelper");
+const fs = require("fs");
+
+const uploadImageController = async (req, res) => {
+  try {
+    // check if file is missing in req object
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "File is required. Please upload an image",
+      });
+    }
+
+    // upload to cloudinary
+    const { url, publicId } = await uploadToCloudinary(req.file.path);
+
+    // store the image url and public id along with the uploaded user id
+    const newlyUploadedImage = new Image({
+      url,
+      publicId,
+      uploadedBy: req.userInfo.userId,
+    });
+    await newlyUploadedImage.save();
+
+    // delete the file from local storage (optional cleanup)
+    // fs.unlinkSync(req.file.path);
+
+    res.status(201).json({
+      success: true,
+      message: "Imaged uploaded successfully",
+      image: newlyUploadedImage,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: "Something went wrong! Please try again" });
+  }
+};
+```
+
+## 5. Route
+
+```js title="routes/image-routes.js"
+router.post(
+  "/upload",
+  authMiddleware,
+  adminMiddleware,
+  uploadMiddleware.single("image"),
+  uploadImageController
+);
+```
+
+<Callout title="Testing in Postman">
+  `POST /api/image/upload`: add the `Authorization: Bearer <admin token>` header, then set Body →
+  **form-data**, key `image`, type **File**, and choose an image.
+</Callout>
+
+## Quick recap
+
+- Multer: `diskStorage` + `fileFilter` + `limits`, then `.single("field")` → `req.file`.
+- Cloudinary: `uploader.upload(path)` → `secure_url` and `public_id`.
+- Save the `url`, `publicId` and `uploadedBy` (ref User) in MongoDB.

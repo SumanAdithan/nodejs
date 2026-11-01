@@ -1,0 +1,146 @@
+---
+title: TypeScript Basics
+description: Setting up TypeScript for Node, plus basic types, enums, tuples, interfaces, type aliases and typed functions.
+---
+
+> **Source:** `11. nodejs-with-typescript` (`src/basics.ts`, `tsconfig.json`, `package.json`)
+
+**TypeScript** is JavaScript with **static types**. It's compiled (`tsc`) to plain JavaScript and catches type errors **before** the code runs.
+
+## Setup
+
+```bash
+npm init -y
+npm i -D typescript ts-node @types/node
+npx tsc --init   # generates tsconfig.json
+```
+
+```json title="tsconfig.json (options used)"
+{
+  "compilerOptions": {
+    "target": "es2016",
+    "lib": ["es6"],
+    "module": "commonjs",
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
+}
+```
+
+| Option            | Meaning                                          |
+| ----------------- | ------------------------------------------------ |
+| `rootDir` / `outDir` | `.ts` sources in `src/` → compiled `.js` in `dist/` |
+| `module: commonjs`| Output uses `require` (Node default)             |
+| `esModuleInterop` | Allows `import express from "express"` for CommonJS packages |
+| `strict`          | Enables all strict type checks                   |
+
+```json title="package.json (scripts)"
+"scripts": {
+  "build": "tsc",
+  "start": "node dist/app.js",
+  "dev": "nodemon src/app.ts"
+}
+```
+
+<Callout>`nodemon` runs `.ts` files through `ts-node` automatically when it's installed.</Callout>
+
+## Basic types
+
+```ts title="src/basics.ts"
+let isDone: boolean = false;
+let num: number = 100;
+let str: string = "Sangam";
+
+let list: number[] = [1, 2, 3];
+let products: Array<string> = ["product 1", "product 2", "product 3"];
+
+let randomVal: any = 4; // any = opt out of type checking (avoid)
+randomVal = "sangam";
+randomVal = true;
+
+let xyz: undefined = undefined;
+let yz: null = null;
+```
+
+## Enum & tuple
+
+```ts
+enum Color {
+  Red,   // 0
+  Green, // 1
+  Blue,  // 2
+}
+let d: Color = Color.Green;
+
+// tuple: fixed length, fixed type per position
+let abc: [string, number] = ["hi", 400];
+```
+
+## Interfaces & type aliases
+
+```ts
+interface User {
+  name: string;
+  id: number;
+  email?: string;           // optional
+  readonly createdAt: Date; // can't be reassigned
+}
+
+const user: User = {
+  name: "Sangam",
+  id: 1,
+  createdAt: new Date(),
+  email: "abc@gmail.com",
+};
+
+type Product = {
+  title: string;
+  price: number;
+};
+
+const product1: Product = { title: "Product 1", price: 200 };
+```
+
+| | `interface` | `type` |
+|-|-|-|
+| Object shapes | ✅ | ✅ |
+| Can be extended | `extends` | `&` intersections |
+| Unions / primitives | ❌ | ✅ (e.g. a union of `string` or `number`) |
+
+## Typed functions
+
+```ts
+function multiply(a: number, b: number): number {
+  return a * b;
+}
+
+const add = (num1: number, num2: number): number => {
+  return num1 + num2;
+};
+
+// optional parameter with ?
+function greet(name: string, greeting?: string): string {
+  return `${name} ${greeting}`;
+}
+
+console.log(greet("sangam", "hello"));
+```
+
+<Callout type="warn">
+  Use lowercase `boolean` / `string`, not `Boolean` / `String`. The capitalized versions are
+  wrapper object types. (The course's `basics.ts` uses `Boolean` and `String` in a couple of
+  places.)
+</Callout>
+
+## Quick recap
+
+- `tsc` compiles `src/*.ts` → `dist/*.js`. Use `ts-node`/`nodemon` in dev.
+- Primitives, `T[]` / `Array<T>`, `any`, `enum`, tuples.
+- `interface` / `type` for object shapes. Use `?` for optional and `readonly` for read-only.
+- Annotate parameters and return types: `(a: number): number`.

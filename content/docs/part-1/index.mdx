@@ -1,0 +1,79 @@
+---
+title: Overview
+description: Node.js for beginners, from core modules to GraphQL and TypeScript.
+icon: Map
+---
+
+## What you'll learn
+
+| Topic | Notes |
+| ----- | ----- |
+| Node.js fundamentals & module system | [Installing & running](/docs/part-1/node-fundamentals/installing-and-running), [Module system](/docs/part-1/node-fundamentals/module-system) |
+| NPM & package management | [npm](/docs/part-1/node-fundamentals/npm) |
+| Core modules (Path, File System, HTTP) | [Path](/docs/part-1/node-fundamentals/path-module), [File system](/docs/part-1/node-fundamentals/file-system), [HTTP](/docs/part-1/node-fundamentals/http-module) |
+| Asynchronous programming & event-driven architecture | [Callbacks](/docs/part-1/async-javascript/callbacks), [Promises](/docs/part-1/async-javascript/promises), [Async/await](/docs/part-1/async-javascript/async-await), [Event emitter](/docs/part-1/async-javascript/event-emitter) |
+| Express.js for web apps & RESTful APIs | [Express basics](/docs/part-1/express/express-basics), [Middleware](/docs/part-1/express/middleware), [REST API](/docs/part-1/express/rest-api) |
+| Template engines (EJS) | [EJS templates](/docs/part-1/express/ejs-templates) |
+| Database integration with MongoDB & Mongoose | [Mongoose basics](/docs/part-1/mongodb/mongoose-basics), [Intermediate & aggregation](/docs/part-1/mongodb/intermediate-and-aggregation) |
+| Authentication, authorization & JWT | [Authentication](/docs/part-1/auth-and-file-upload/authentication), [Authorization](/docs/part-1/auth-and-file-upload/authorization), [Change password, delete & pagination](/docs/part-1/auth-and-file-upload/change-password-delete-pagination) |
+| File uploads with Multer & Cloudinary | [File upload](/docs/part-1/auth-and-file-upload/file-upload) |
+| Real-time apps with Socket.io | [Real-time chat](/docs/part-1/socket-io/realtime-chat) |
+| Deployment (Render, Vercel) | [Render](/docs/part-1/deployment/render), [Vercel](/docs/part-1/deployment/vercel) |
+| GraphQL APIs | [GraphQL basics](/docs/part-1/graphql/graphql-basics), [GraphQL + Mongoose](/docs/part-1/graphql/graphql-with-mongoose) |
+| TypeScript in Node.js development | [TS basics](/docs/part-1/typescript/typescript-basics), [Express + TS](/docs/part-1/typescript/express-with-typescript) |
+
+### Projects
+
+| Project | Notes |
+| ------- | ----- |
+| Book Store API (CRUD operations) | [Bookstore API](/docs/part-1/mongodb/bookstore-api) |
+| Real-time Chat Application | [Real-time chat](/docs/part-1/socket-io/realtime-chat) |
+
+## Source code map
+
+All code for this part is in `learnings/NodeJS-Course-2024-For-Beginners/`.
+
+<Files>
+  <Folder name="NodeJS-Course-2024-For-Beginners" defaultOpen>
+    <Folder name="1. node-tutorial">
+      <File name="1. hello-world-node" />
+      <File name="2. node-module-system" />
+      <File name="3. node-package-manager" />
+      <File name="4. path-module" />
+      <File name="5. file-system" />
+      <File name="6. http-module" />
+      <File name="7. callbacks" />
+      <File name="8. promises" />
+      <File name="9. async-await" />
+      <File name="10. event-emitter" />
+    </Folder>
+    <File name="2. express-tutorial" />
+    <File name="3. ejs-tutorial" />
+    <File name="4. rest-api-development" />
+    <File name="5. mongodb-basics" />
+    <File name="6. bookstore-api" />
+    <File name="7. nodejs-auth (auth, file upload, pagination, vercel.json)" />
+    <File name="8. mongodb-intermediate" />
+    <File name="9. nodejs-socket" />
+    <File name="10. nodejs-graphql" />
+    <File name="11. nodejs-with-typescript" />
+  </Folder>
+</Files>
+
+## Packages used in this part
+
+| Package                                  | Used for                                   |
+| ---------------------------------------- | ------------------------------------------ |
+| `lodash`                                 | npm demo (first third-party package)       |
+| `express`                                | Web framework / routing / middleware       |
+| `ejs`                                    | Server-side HTML templates                 |
+| `mongoose`                               | MongoDB ODM (schemas, models, queries)     |
+| `dotenv`                                 | Load `.env` into `process.env`             |
+| `nodemon` (dev)                          | Auto-restart the server on file changes    |
+| `bcryptjs`                               | Password hashing                           |
+| `jsonwebtoken`                           | JWT access tokens                          |
+| `multer`                                 | Handling `multipart/form-data` uploads     |
+| `cloudinary`                             | Cloud image storage                        |
+| `socket.io`                              | Real-time, two-way communication           |
+| `@apollo/server`, `graphql`, `graphql-tag` | GraphQL server                           |
+| `typescript`, `ts-node`, `@types/*`      | TypeScript with Node/Express               |

@@ -1,0 +1,76 @@
+---
+title: Deploying to Vercel
+description: Deploying an Express API to Vercel with vercel.json and environment variables.
+---
+
+> **Source:** `7. nodejs-auth/vercel.json`
+
+See also: [Deploying to Render](/docs/part-1/deployment/render).
+
+The course deploys the **auth API** to **Vercel**, which runs the Express app as a serverless function.
+
+## vercel.json
+
+```json title="vercel.json"
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "server.js"
+    }
+  ]
+}
+```
+
+| Key      | Meaning                                               |
+| -------- | ----------------------------------------------------- |
+| `builds` | Build `server.js` with the Node.js runtime (`@vercel/node`) |
+| `routes` | Send **every** path (`/(.*)`) to `server.js`, so Express handles routing |
+
+## Deployment checklist
+
+<Steps>
+<Step>
+Make sure `package.json` has a start script and all dependencies are in `dependencies`:
+
+```json
+"scripts": {
+  "start": "node server.js",
+  "dev": "nodemon server.js"
+}
+```
+</Step>
+<Step>
+Make sure `.env` and `node_modules` are in `.gitignore`, then push the project to GitHub.
+</Step>
+<Step>
+On Vercel: **Add New → Project**, import the repo, and select the project folder as the root directory.
+</Step>
+<Step>
+Add **Environment Variables** in Vercel (the same keys as `.env`: `MONGO_URI`, `JWT_SECRET_KEY`, `CLOUDINARY_*`).
+</Step>
+<Step>
+In MongoDB Atlas → Network Access, allow access from anywhere (`0.0.0.0/0`), because Vercel's IPs change.
+</Step>
+<Step>
+Deploy, then test the live URL in Postman, e.g. `POST https://<app>.vercel.app/api/auth/login`.
+</Step>
+</Steps>
+
+<Callout type="warn" title="Serverless limitation">
+  Vercel's filesystem is read-only and temporary, so Multer's `diskStorage` to `uploads/` won't
+  work reliably there. Local storage is only a temporary step before uploading to Cloudinary.
+</Callout>
+
+## Quick recap
+
+- `vercel.json`: build `server.js` with `@vercel/node` and route everything to it.
+- Never commit `.env`. Set the variables in the Vercel dashboard instead.
+- Allow Atlas network access for the deployed app.

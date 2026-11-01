@@ -1,0 +1,237 @@
+---
+title: Intermediate MongoDB & Aggregation
+description: insertMany, references with populate, and aggregation pipelines with $match, $group and $project.
+---
+
+> **Source:** `8. mongodb-intermediate`
+
+## Project setup
+
+```js title="server.js"
+require("dotenv").config();
+const express = require("express");
+const mongoose = require("mongoose");
+const productRoutes = require("./routes/product-routes");
+const bookRoutes = require("./routes/book-routes");
+
+const app = express();
+
+// connect to our database
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("mongodb connected successfully"))
+  .catch((e) => console.log(e));
+
+app.use(express.json());
+
+app.use("/products", productRoutes);
+app.use("/reference", bookRoutes);
+
+app.listen(process.env.PORT, () => {
+  console.log(`Server is now running on port ${process.env.PORT}`);
+});
+```
+
+| Route                        | Controller             |
+| ---------------------------- | ---------------------- |
+| `POST /products/add`         | `insertSampleProducts` |
+| `GET /products/stats`        | `getProductStats`      |
+| `GET /products/analysis`     | `getProductAnalysis`   |
+| `POST /reference/author`     | `createAuthor`         |
+| `POST /reference/book`       | `createBook`           |
+| `GET /reference/book/:id`    | `getBookWithAuthor`    |
+
+## Bulk insert: `insertMany`
+
+```js title="models/Product.js"
+const ProductSchema = new mongoose.Schema({
+  name: String,
+  category: String,
+  price: Number,
+  inStock: Boolean,
+  tags: [String],
+});
+
+module.exports = mongoose.model("Product", ProductSchema);
+```
+
+```js title="controllers/product-controller.js"
+const insertSampleProducts = async (req, res) => {
+  try {
+    const sampleProducts = [
+      { name: "Laptop", category: "Electronics", price: 999, inStock: true, tags: ["computer", "tech"] },
+      { name: "Smartphone", category: "Electronics", price: 699, inStock: true, tags: ["mobile", "tech"] },
+      { name: "Headphones", category: "Electronics", price: 199, inStock: false, tags: ["audio", "tech"] },
+      { name: "Running Shoes", category: "Sports", price: 89, inStock: true, tags: ["footwear", "running"] },
+      { name: "Novel", category: "Books", price: 15, inStock: true, tags: ["fiction", "bestseller"] },
+    ];
+    const result = await Product.insertMany(sampleProducts);
+    res.status(201).json({ success: true, data: `Inserted ${result.length} sample products` });
+  } catch (e) {
+    console.log(e);
+    res.status(500).json({ success: false, message: "Some error occured!" });
+  }
+};
+```
+
+## Aggregation pipeline
+
+An **aggregation pipeline** is an array of **stages**. Documents flow through each stage in order, and each stage transforms them.
+
+```txt
+collection → $match → $group → $project → result
+```
+
+| Stage      | Purpose                                                 |
+| ---------- | ------------------------------------------------------- |
+| `$match`   | Filter documents (like `find`)                          |
+| `$group`   | Group by `_id` and compute accumulators                 |
+| `$project` | Shape the output: include (`1`), exclude (`0`), compute fields |
+
+| Accumulator / operator | Meaning           |
+| ---------------------- | ----------------- |
+| `$sum: 1`              | Count docs        |
+| `$sum: "$price"`       | Sum a field       |
+| `$avg`, `$max`, `$min` | Average / max / min |
+| `$subtract: [a, b]`    | a − b             |
+| `$gte`                 | ≥ (in `$match`)   |
+
+<Callout>Refer to a field's value inside a stage with a `$` prefix: `"$price"`, `"$category"`.</Callout>
+
+### Example 1: stats per category
+
+```js
+const getProductStats = async (req, res) => {
+  try {
+    const result = await Product.aggregate([
+      // stage 1: only in-stock products priced >= 100
+      {
+        $match: {
+          inStock: true,
+          price: { $gte: 100 },
+        },
+      },
+      // stage 2: group by category
+      {
+        $group: {
+          _id: "$category",
+          avgPrice: { $avg: "$price" },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    res.status(200).json({ success: true, data: result });
+  } catch (e) {
+    console.log(e);
+    res.status(500).json({ success: false, message: "Some error occured!" });
+  }
+};
+```
+
+### Example 2: analysis with `$project`
+
+```js
+const getProductAnalysis = async (req, res) => {
+  try {
+    const result = await Product.aggregate([
+      { $match: { category: "Electronics" } },
+      {
+        $group: {
+          _id: null, // null → one group for all matched docs
+          totalRevenue: { $sum: "$price" },
+          averagePrice: { $avg: "$price" },
+          maxProductPrice: { $max: "$price" },
+          minProductPrice: { $min: "$price" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          totalRevenue: 1,
+          averagePrice: 1,
+          maxProductPrice: 1,
+          minProductPrice: 1,
+          priceRange: { $subtract: ["$maxProductPrice", "$minProductPrice"] },
+        },
+      },
+    ]);
+
+    res.status(200).json({ success: true, data: result });
+  } catch (e) {
+    res.status(500).json({ success: false, message: "Some error occured!" });
+  }
+};
+```
+
+## References & `populate`
+
+Store another document's `_id` with `ref`, then let Mongoose swap the id for the full document.
+
+```js title="models/Author.js"
+const AuthorSchema = new mongoose.Schema({
+  name: String,
+  bio: String,
+});
+
+module.exports = mongoose.model("Author", AuthorSchema);
+```
+
+```js title="models/Book.js"
+const BookSchema = new mongoose.Schema({
+  title: String,
+  author: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Author", // must match the model name
+  },
+});
+
+module.exports = mongoose.model("Book", BookSchema);
+```
+
+```js title="controllers/book-controller.js"
+const createAuthor = async (req, res) => {
+  try {
+    const author = new Author(req.body);
+    await author.save();
+    res.status(201).json({ success: true, data: author });
+  } catch (e) {
+    console.log(e);
+    res.status(500).json({ success: false, message: "Some error occured" });
+  }
+};
+
+const createBook = async (req, res) => {
+  try {
+    const book = new Book(req.body); // body: { "title": "...", "author": "<authorId>" }
+    await book.save();
+    res.status(201).json({ success: true, data: book });
+  } catch (e) {
+    console.log(e);
+    res.status(500).json({ success: false, message: "Some error occured" });
+  }
+};
+
+const getBookWithAuthor = async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.id).populate("author");
+
+    if (!book) {
+      return res.status(404).json({ success: false, message: "Book not found!" });
+    }
+
+    res.status(200).json({ success: true, data: book });
+  } catch (e) {
+    console.log(e);
+    res.status(500).json({ success: false, message: "Some error occured" });
+  }
+};
+```
+
+Without `populate`: `"author": "6720..."`. With it: `"author": { "_id": "6720...", "name": "...", "bio": "..." }`.
+
+## Quick recap
+
+- `Model.insertMany([...])` for bulk inserts.
+- `Model.aggregate([{ $match }, { $group }, { $project }])`, using `"$field"` to read values.
+- `type: ObjectId, ref: "Model"` plus `.populate("field")` to join documents.

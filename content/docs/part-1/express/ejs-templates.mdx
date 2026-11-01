@@ -1,0 +1,114 @@
+---
+title: EJS Template Engine
+description: Rendering dynamic HTML on the server with EJS views, data, loops and partials.
+---
+
+> **Source:** `3. ejs-tutorial`
+
+**EJS** (Embedded JavaScript) lets you write HTML with JavaScript inside it. Express renders it on the server and sends plain HTML to the browser.
+
+```bash
+npm i express ejs
+```
+
+## Project structure
+
+<Files>
+  <Folder name="3. ejs-tutorial" defaultOpen>
+    <File name="index.js" />
+    <Folder name="views" defaultOpen>
+      <File name="home.ejs" />
+      <File name="about.ejs" />
+      <Folder name="components" defaultOpen>
+        <File name="header.ejs" />
+      </Folder>
+    </Folder>
+  </Folder>
+</Files>
+
+## Setup & rendering
+
+```js title="index.js"
+const express = require("express");
+const path = require("path");
+
+const app = express();
+
+// set the view engine as ejs
+app.set("view engine", "ejs");
+
+// set the directory for the views
+app.set("views", path.join(__dirname, "views"));
+
+const products = [
+  { id: 1, title: "Product 1" },
+  { id: 2, title: "Product 2" },
+  { id: 3, title: "Product 3" },
+];
+
+app.get("/", (req, res) => {
+  res.render("home", { title: "Home", products: products });
+});
+
+app.get("/about", (req, res) => {
+  res.render("about", { title: "About page" });
+});
+
+app.listen(3000, () => console.log("server is running"));
+```
+
+`res.render("home", data)` finds `views/home.ejs` and makes each key in `data` available as a variable in the template.
+
+## EJS tags
+
+| Tag            | Purpose                                          |
+| -------------- | ------------------------------------------------ |
+| `<% code %>`   | Run JS (loops, ifs). No output                   |
+| `<%= value %>` | Output a value, **HTML-escaped** (safe)          |
+| `<%- value %>` | Output **unescaped** HTML (used for `include`)   |
+
+## Views
+
+```html title="views/home.ejs"
+<%- include('components/header.ejs') %>
+<h1>Welcome to homepage</h1>
+<label>List of products</label>
+
+<ul>
+  <% products.forEach(product=>{ %>
+  <li><%= product.title %></li>
+  <% }) %>
+</ul>
+```
+
+```html title="views/about.ejs"
+<%- include('components/header.ejs') %>
+<h1>THis is our about page</h1>
+```
+
+```html title="views/components/header.ejs"
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <header>
+      <h1>EJS Template Header</h1>
+    </header>
+  </body>
+</html>
+```
+
+<Callout>
+  `include()` reuses a partial (header, footer, navbar) across pages. Always use `<%-` with
+  `include` so the HTML isn't escaped.
+</Callout>
+
+## Quick recap
+
+- `app.set("view engine", "ejs")` and `app.set("views", path.join(__dirname, "views"))`
+- `res.render("viewName", { data })`
+- `<% %>` logic, `<%= %>` safe output, `<%- include() %>` partials.

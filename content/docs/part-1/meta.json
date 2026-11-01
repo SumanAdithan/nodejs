@@ -1,0 +1,24 @@
+{
+  "title": "Part 1 · Node.js",
+  "description": "Beginner to advanced Node.js",
+  "icon": "Server",
+  "root": true,
+  "defaultOpen": true,
+  "pages": [
+    "index",
+    "---Foundations---",
+    "node-fundamentals",
+    "async-javascript",
+    "---Web Servers---",
+    "express",
+    "---Databases---",
+    "mongodb",
+    "---Building Real APIs---",
+    "auth-and-file-upload",
+    "socket-io",
+    "deployment",
+    "---Beyond REST & JS---",
+    "graphql",
+    "typescript"
+  ]
+}

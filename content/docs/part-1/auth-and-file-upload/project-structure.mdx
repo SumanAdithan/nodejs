@@ -1,0 +1,136 @@
+---
+title: Project Structure & Setup
+description: Folder layout, packages, environment variables and the server entry for the auth + image upload API.
+---
+
+> **Source:** `7. nodejs-auth`
+
+One project covers four course sections: **authentication**, **authorization**, **file upload** and **change password / delete image / sorting & pagination**. This page explains the shared setup.
+
+## Folder structure
+
+<Files>
+  <Folder name="7. nodejs-auth" defaultOpen>
+    <Folder name="config" defaultOpen>
+      <File name="cloudinary.js" />
+    </Folder>
+    <Folder name="controllers" defaultOpen>
+      <File name="auth-controller.js" />
+      <File name="image-controller.js" />
+    </Folder>
+    <Folder name="database" defaultOpen>
+      <File name="db.js" />
+    </Folder>
+    <Folder name="helpers" defaultOpen>
+      <File name="cloudinaryHelper.js" />
+    </Folder>
+    <Folder name="middleware" defaultOpen>
+      <File name="auth-middleware.js" />
+      <File name="admin-middleware.js" />
+      <File name="upload-middleware.js" />
+    </Folder>
+    <Folder name="models" defaultOpen>
+      <File name="User.js" />
+      <File name="Image.js" />
+    </Folder>
+    <Folder name="routes" defaultOpen>
+      <File name="auth-routes.js" />
+      <File name="home-routes.js" />
+      <File name="admin-routes.js" />
+      <File name="image-routes.js" />
+    </Folder>
+    <Folder name="uploads" />
+    <File name=".env" />
+    <File name=".gitignore" />
+    <File name="server.js" />
+    <File name="vercel.json" />
+  </Folder>
+</Files>
+
+## Packages
+
+```bash
+npm i express mongoose dotenv bcryptjs jsonwebtoken multer cloudinary
+npm i -D nodemon
+```
+
+| Package        | Role                                   |
+| -------------- | -------------------------------------- |
+| `bcryptjs`     | Hash & compare passwords               |
+| `jsonwebtoken` | Sign & verify JWT access tokens        |
+| `multer`       | Parse `multipart/form-data` file uploads |
+| `cloudinary`   | Store images in the cloud              |
+
+## Environment variables
+
+```ini title=".env"
+PORT=3000
+MONGO_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/
+JWT_SECRET_KEY=<long-random-secret>
+CLOUDINARY_CLOUD_NAME=<cloud-name>
+CLOUDINARY_API_KEY=<api-key>
+CLOUDINARY_API_SECRET=<api-secret>
+```
+
+```txt title=".gitignore"
+node_modules
+.env
+```
+
+## Database connection
+
+```js title="database/db.js"
+const mongoose = require("mongoose");
+
+const connectToDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log("MongoDB connected successfully");
+  } catch (e) {
+    console.error("MongoDB connection failed");
+    process.exit(1);
+  }
+};
+
+module.exports = connectToDB;
+```
+
+## Server entry
+
+```js title="server.js"
+require("dotenv").config();
+const express = require("express");
+const connectToDB = require("./database/db");
+const authRoutes = require("./routes/auth-routes");
+const homeRoutes = require("./routes/home-routes");
+const adminRoutes = require("./routes/admin-routes");
+const uploadImageRoutes = require("./routes/image-routes");
+
+connectToDB();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middlewares
+app.use(express.json());
+
+app.use("/api/auth", authRoutes);
+app.use("/api/home", homeRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/image", uploadImageRoutes);
+
+app.listen(PORT, () => console.log(`Server is now listening to PORT ${PORT}`));
+```
+
+## All endpoints
+
+| Method | Endpoint                     | Middleware                     | Purpose                  |
+| ------ | ---------------------------- | ------------------------------ | ------------------------ |
+| POST   | `/api/auth/register`         | —                              | Register a user          |
+| POST   | `/api/auth/login`            | —                              | Login → JWT              |
+| POST   | `/api/auth/change-password`  | auth                           | Change own password      |
+| GET    | `/api/home/welcome`          | auth                           | Any logged-in user       |
+| GET    | `/api/admin/welcome`         | auth → admin                   | Admins only              |
+| POST   | `/api/image/upload`          | auth → admin → multer          | Upload an image          |
+| GET    | `/api/image/get`             | auth                           | List images (sorted, paginated) |
+| DELETE | `/api/image/:id`             | auth → admin                   | Delete own image         |

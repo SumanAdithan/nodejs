@@ -1,0 +1,71 @@
+---
+title: HTTP Module
+description: Building a raw web server and basic routing with Node's built-in http module.
+---
+
+> **Source:** `1. node-tutorial/6. http-module`
+
+The built-in `http` module creates a web server with no framework. Express is built on top of it.
+
+## Basic server
+
+```js title="server.js"
+const http = require("http");
+
+const server = http.createServer((req, res) => {
+  console.log(req, "req");
+  res.writeHead(200, { "Content-Type": "text/plain" });
+  res.end("Hello node js from http module");
+});
+
+const port = 3000;
+server.listen(port, () => {
+  console.log(`Server is now listening to port ${port}`);
+});
+```
+
+| Piece                         | Meaning                                                       |
+| ----------------------------- | ------------------------------------------------------------- |
+| `http.createServer(handler)`  | Handler runs on **every** request                             |
+| `req`                         | Incoming request (`req.url`, `req.method`, `req.headers`)     |
+| `res.writeHead(status, headers)` | Sets the status code and response headers                  |
+| `res.end(body)`               | Sends the body and finishes the response                      |
+| `server.listen(port, cb)`     | Starts listening on the port                                  |
+
+## Manual routing
+
+```js title="routes.js"
+const http = require("http");
+
+const server = http.createServer((req, res) => {
+  const url = req.url;
+
+  if (url === "/") {
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end("Home page");
+  } else if (url === "/projects") {
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end("Projects");
+  } else {
+    res.writeHead(404, { "Content-Type": "text/plain" });
+    res.end("This page can not be found!");
+  }
+});
+
+const port = 3000;
+server.listen(port, () => {
+  console.log(`Server is now listening to port ${port}`);
+});
+```
+
+<Callout title="Why Express exists">
+  Routing with `if/else` on `req.url` gets messy fast, and there's no built-in support for
+  methods, URL params, JSON bodies or middleware. [Express](/docs/part-1/express/express-basics)
+  solves all of this.
+</Callout>
+
+## Quick recap
+
+- `http.createServer((req, res) => {...}).listen(3000)`
+- Always finish a response with `res.end()`, or the request hangs.
+- Common status codes: `200` OK, `404` not found.

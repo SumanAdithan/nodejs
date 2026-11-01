@@ -1,0 +1,100 @@
+---
+title: File System (fs)
+description: Creating folders and reading, writing and appending files, sync and async.
+---
+
+> **Source:** `1. node-tutorial/5. file-system`
+
+`fs` is the built-in module for working with files and folders. Most methods come in two styles:
+
+| Style     | Example               | Behaviour                                         |
+| --------- | --------------------- | ------------------------------------------------- |
+| **Sync**  | `fs.readFileSync()`   | Blocks until done, returns the result             |
+| **Async** | `fs.readFile(cb)`     | Non-blocking, result delivered to a callback      |
+
+## Methods covered
+
+| Task               | Sync                     | Async                    |
+| ------------------ | ------------------------ | ------------------------ |
+| Check existence    | `fs.existsSync(p)`       | —                        |
+| Create folder      | `fs.mkdirSync(p)`        | `fs.mkdir(p, cb)`        |
+| Write (overwrite)  | `fs.writeFileSync(p, d)` | `fs.writeFile(p, d, cb)` |
+| Read               | `fs.readFileSync(p, "utf8")` | `fs.readFile(p, "utf8", cb)` |
+| Append             | `fs.appendFileSync(p, d)`| `fs.appendFile(p, d, cb)`|
+
+<Callout>
+  Pass `"utf8"` when reading. Without it you get a raw `Buffer` instead of a string.
+</Callout>
+
+## Setup: create a folder if missing
+
+```js
+const fs = require("fs");
+const path = require("path");
+
+const dataFolder = path.join(__dirname, "data");
+
+if (!fs.existsSync(dataFolder)) {
+  fs.mkdirSync(dataFolder);
+  console.log("data folder created");
+}
+```
+
+## Sync and async
+
+<Tabs items={["Sync", "Async (callbacks)"]}>
+<Tab value="Sync">
+
+```js
+const filePath = path.join(dataFolder, "example.txt");
+
+fs.writeFileSync(filePath, "Hello from node js");
+console.log("file created successfully");
+
+const readContentFromFile = fs.readFileSync(filePath, "utf8");
+console.log("File content:", readContentFromFile);
+
+fs.appendFileSync(filePath, "\nThis is a new line added to that file");
+console.log("new file content added");
+```
+
+</Tab>
+<Tab value="Async (callbacks)">
+
+```js
+const asyncFilePath = path.join(dataFolder, "async-example.txt");
+
+fs.writeFile(asyncFilePath, "Hello, Async node js", (err) => {
+  if (err) throw err;
+  console.log("Async file is created successfully");
+
+  fs.readFile(asyncFilePath, "utf8", (err, data) => {
+    if (err) throw err;
+    console.log("Async file content:", data);
+
+    fs.appendFile(asyncFilePath, "\nThis ia another line added", (err) => {
+      if (err) throw err;
+      console.log("New line added to async file");
+
+      fs.readFile(asyncFilePath, "utf8", (err, updatedData) => {
+        if (err) throw err;
+        console.log("Updated file content", updatedData);
+      });
+    });
+  });
+});
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warn" title="Notice the nesting">
+  Each async step has to wait for the previous one, so the callbacks nest deeper and deeper. This
+  is the start of **callback hell**, covered in [Callbacks](/docs/part-1/async-javascript/callbacks).
+</Callout>
+
+## Quick recap
+
+- Sync methods are simple but block the thread. Fine for scripts and startup code.
+- Async methods don't block. Use them in servers.
+- Async callbacks are **error-first**: `(err, data) => {}`.

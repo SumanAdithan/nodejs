@@ -1,0 +1,80 @@
+---
+title: Installing & Running Node.js
+description: Install Node.js and run your first JavaScript files outside the browser.
+---
+
+> **Source:** `1. node-tutorial/1. hello-world-node`
+
+## What is Node.js?
+
+Node.js is a **JavaScript runtime** built on Chrome's V8 engine. It runs JavaScript **outside the browser**, so you can build servers, CLIs, scripts and APIs with JavaScript.
+
+- **Single-threaded** and **non-blocking (async)**: slow work like I/O, timers and network calls runs in the background while your code keeps going.
+- No browser APIs (`window`, `document`). Instead you get Node APIs (`fs`, `http`, `path`, …).
+
+## Installing
+
+<Steps>
+<Step>
+Download the **LTS** version from [nodejs.org](https://nodejs.org) and install it.
+</Step>
+<Step>
+Check that it worked:
+
+```bash
+node -v
+npm -v
+```
+</Step>
+</Steps>
+
+## Running a JavaScript file
+
+```js title="index.js"
+console.log("hello js");
+
+const array = [1, 2, 3, 4];
+console.log(array, "array");
+
+setTimeout(() => {
+  console.log("this message is delayed by 2 seconds");
+}, 2000);
+
+console.log("this is the last line of the sync code");
+```
+
+```bash
+node index.js
+```
+
+Output:
+
+```txt
+hello js
+[ 1, 2, 3, 4 ] array
+this is the last line of the sync code
+this message is delayed by 2 seconds
+```
+
+<Callout title="Why does the last line print before the timeout?">
+  `setTimeout` is **async**. Node schedules it and moves on, so all the synchronous code runs
+  first. The callback runs about 2 seconds later. This non-blocking behaviour is the core idea
+  of Node.js.
+</Callout>
+
+```js title="sum.js"
+function sum(num1, num2) {
+  return num1 + num2;
+}
+
+console.log(sum(2, 3)); // 5
+```
+
+```bash
+node sum.js
+```
+
+## Quick recap
+
+- `node -v` checks the installed version. `node <file>.js` runs a file.
+- Synchronous code runs first. Async callbacks (`setTimeout`, I/O) run later.

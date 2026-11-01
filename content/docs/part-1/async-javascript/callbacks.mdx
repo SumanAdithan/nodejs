@@ -1,0 +1,96 @@
+---
+title: Callbacks & Callback Hell
+description: Passing functions as arguments, error-first callbacks, and why deeply nested callbacks are a problem.
+---
+
+> **Source:** `1. node-tutorial/7. callbacks`
+
+## What is a callback?
+
+A **callback** is a function passed to another function, which calls it later.
+
+```js
+function person(name, callbackFn) {
+  console.log(`Hello ${name}`);
+  callbackFn();
+}
+
+function address() {
+  console.log("India");
+}
+
+person("Sangam Mukherjee", address);
+// Hello Sangam Mukherjee
+// India
+```
+
+## Async callbacks (error-first)
+
+Node's async APIs take a callback whose **first argument is the error** and second is the result.
+
+```js
+const fs = require("fs");
+
+fs.readFile("input.txt", "utf8", (err, data) => {
+  if (err) {
+    console.error("Error reading file", err);
+    return;
+  }
+  console.log(data);
+});
+```
+
+<Callout>
+  Always check `err` first and `return` early. Otherwise the success code runs even after a
+  failure.
+</Callout>
+
+## Callback hell
+
+When each async step depends on the one before, callbacks nest inside callbacks. Here: read a file, uppercase it, write it, then read it back.
+
+```js title="callback-hell.js"
+const fs = require("fs");
+
+fs.readFile("input.txt", "utf8", (err, data) => {
+  if (err) {
+    console.error("Error reading file", err);
+    return;
+  }
+
+  const modifyFileData = data.toUpperCase();
+
+  fs.writeFile("output.txt", modifyFileData, (err) => {
+    if (err) {
+      console.error("Error writing file", err);
+      return;
+    }
+
+    console.log("data written to the new file");
+
+    fs.readFile("output.txt", "utf8", (err, data) => {
+      if (err) {
+        console.error("Error reading file", err);
+        return;
+      }
+
+      console.log(data); // CALLBACK LOGIC CONCEPTS
+    });
+  });
+});
+```
+
+<Callout type="warn" title="Problems with callback hell">
+  - Code drifts to the right (the "pyramid of doom").
+  - Error handling is repeated at every level.
+  - Hard to read, change and debug.
+
+  The fix: [Promises](/docs/part-1/async-javascript/promises), then
+  [async/await](/docs/part-1/async-javascript/async-await).
+</Callout>
+
+## Quick recap
+
+- A callback is a function passed in to be called later.
+- Node uses **error-first** callbacks: `(err, result) => {}`.
+- Nested dependent callbacks lead to callback hell. Use promises or async/await instead.

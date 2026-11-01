@@ -1,0 +1,96 @@
+---
+title: Async / Await
+description: Writing promise-based code that reads like synchronous code, with try/catch error handling.
+---
+
+> **Source:** `1. node-tutorial/9. async-await`
+
+`async`/`await` is syntax built on top of promises. It lets async code read top to bottom like normal code.
+
+| Keyword          | Meaning                                                     |
+| ---------------- | ----------------------------------------------------------- |
+| `async function` | Always returns a Promise                                    |
+| `await promise`  | Pauses **this function** until the promise settles (only inside `async`) |
+
+## Basic usage
+
+```js
+function delayFn(time) {
+  return new Promise((resolve) => setTimeout(resolve, time));
+}
+
+async function delayedGreet(name) {
+  await delayFn(2000);
+  console.log(name);
+}
+
+delayedGreet("Sangam"); // prints "Sangam" after 2s
+```
+
+## Error handling with try / catch
+
+```js
+async function division(num1, num2) {
+  try {
+    if (num2 === 0) throw new Error("Can not divide by 0");
+    return num1 / num2;
+  } catch (error) {
+    console.error("error", error);
+    return null;
+  }
+}
+
+async function mainFn() {
+  console.log(await division(10, 2)); // 5
+  console.log(await division(10, 0)); // logs error, then null
+}
+
+mainFn();
+```
+
+<Callout>
+  `await` only pauses the current `async` function. The rest of the program (other requests,
+  timers) keeps running. That's why this pattern is used everywhere in Express controllers.
+</Callout>
+
+## Callbacks → Promises → Async/Await
+
+<Tabs items={["Callback", "Promise", "Async/Await"]}>
+<Tab value="Callback">
+
+```js
+doTask((err, result) => {
+  if (err) return handle(err);
+  use(result);
+});
+```
+
+</Tab>
+<Tab value="Promise">
+
+```js
+doTask()
+  .then((result) => use(result))
+  .catch((err) => handle(err));
+```
+
+</Tab>
+<Tab value="Async/Await">
+
+```js
+try {
+  const result = await doTask();
+  use(result);
+} catch (err) {
+  handle(err);
+}
+```
+
+</Tab>
+</Tabs>
+
+## Quick recap
+
+- Mark the function `async`, then `await` promises inside it.
+- Wrap awaits in `try/catch` to handle errors.
+- An `async` function always returns a promise.

@@ -1,0 +1,60 @@
+---
+title: Path Module
+description: Working with file and directory paths safely across operating systems.
+---
+
+> **Source:** `1. node-tutorial/4. path-module`
+
+`path` is a built-in module for working with file paths. It handles `/` vs `\` across operating systems, so you never have to concatenate path strings by hand.
+
+```js
+const path = require("path");
+```
+
+## Methods
+
+| Method                     | What it does                                          |
+| -------------------------- | ----------------------------------------------------- |
+| `path.dirname(p)`          | Folder part of a path                                 |
+| `path.basename(p)`         | File name (with extension)                            |
+| `path.extname(p)`          | File extension (`.js`)                                |
+| `path.join(...parts)`      | Joins segments with the right separator               |
+| `path.resolve(...parts)`   | Builds an **absolute** path (from the current working dir) |
+| `path.normalize(p)`        | Cleans up `..`, `.` and duplicate separators          |
+
+## Example
+
+```js title="index.js"
+const path = require("path");
+
+console.log("Directory name:", path.dirname(__filename));
+console.log("File name", path.basename(__filename));
+console.log("file extension", path.extname(__filename));
+
+const joinPath = path.join("/user", "documents", "node", "projects");
+console.log("Joined path", joinPath); // /user/documents/node/projects
+
+const resolvePath = path.resolve("user", "documents", "node", "project");
+console.log("Resolve path:", resolvePath); // <cwd>/user/documents/node/project
+
+const normalizePath = path.normalize("/user/.documents/../node/projects");
+console.log("normalizePath", normalizePath); // /user/node/projects
+```
+
+<Callout title="join vs resolve">
+  `join` just glues segments together, so it can return a relative path. `resolve` always returns
+  an absolute path, starting from the current working directory if no segment is absolute.
+</Callout>
+
+## Common pattern
+
+```js
+const filePath = path.join(__dirname, "data", "example.txt");
+```
+
+This always points to `data/example.txt` next to the current file, no matter where you run `node` from.
+
+## Quick recap
+
+- Always build paths with `path.join(__dirname, ...)`.
+- Use `dirname`, `basename` and `extname` to pull a path apart.

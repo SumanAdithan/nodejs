@@ -1,0 +1,139 @@
+---
+title: Express Basics
+description: Setting up an Express app, routing, route params, app settings and error handling.
+---
+
+> **Source:** `2. express-tutorial` (`index.js`, `routes-example.js`, `app-module.js`)
+
+**Express** is a minimal web framework on top of Node's `http` module. It gives you routing, middleware, and helpers like `res.json()`.
+
+```bash
+npm i express
+```
+
+## Hello world
+
+```js title="index.js"
+const express = require("express");
+
+const app = express();
+
+app.get("/", (req, res) => {
+  res.send("Hello world");
+});
+
+const port = 3000;
+app.listen(port, () => {
+  console.log(`Server is now running at port ${port}`);
+});
+```
+
+## Routing
+
+`app.METHOD(path, handler)`, where METHOD is `get`, `post`, `put`, `delete`, …
+
+```js title="routes-example.js"
+const express = require("express");
+const app = express();
+
+// root route
+app.get("/", (req, res) => {
+  res.send("Welcome to our home page");
+});
+
+// get all products
+app.get("/products", (req, res) => {
+  const products = [
+    { id: 1, label: "Product 1" },
+    { id: 2, label: "Product 2" },
+    { id: 3, label: "Product 3" },
+  ];
+  res.json(products);
+});
+
+// get a single product (route param)
+app.get("/products/:productId", (req, res) => {
+  console.log("req.params", req.params);
+
+  const productId = parseInt(req.params.productId);
+  const products = [
+    { id: 1, label: "Product 1" },
+    { id: 2, label: "Product 2" },
+    { id: 3, label: "Product 3" },
+  ];
+
+  const getSingleProduct = products.find((product) => product.id === productId);
+
+  if (getSingleProduct) {
+    res.json(getSingleProduct);
+  } else {
+    res.status(404).send("product is not found! please try with different id");
+  }
+});
+
+app.listen(3000, () => console.log("Server is now running at port 3000"));
+```
+
+<Callout>
+  `req.params` values are always **strings**. Convert them (`parseInt`) before comparing with
+  numbers.
+</Callout>
+
+## Request & response cheatsheet
+
+| Request         | Meaning                                    |
+| --------------- | ------------------------------------------ |
+| `req.params`    | URL params: `/products/:productId`         |
+| `req.query`     | Query string: `?page=2&limit=10`           |
+| `req.body`      | Request body (needs `express.json()` middleware) |
+| `req.headers`   | Request headers                            |
+| `req.method`, `req.url` | HTTP method and path               |
+
+| Response               | Meaning                                |
+| ---------------------- | -------------------------------------- |
+| `res.send(data)`       | Send text/HTML                         |
+| `res.json(obj)`        | Send JSON                              |
+| `res.status(code)`     | Set status (chainable: `res.status(404).json(...)`) |
+| `res.render(view, data)` | Render a template (EJS)              |
+
+## App-level settings & error handler
+
+```js title="app-module.js"
+const express = require("express");
+const app = express();
+
+// application level settings
+app.set("view engine", "ejs");
+
+// routing
+app.get("/", (req, res) => {
+  res.send("home page");
+});
+
+app.post("/api/data", (req, res) => {
+  res.json({
+    message: "Data received",
+    data: req.body,
+  });
+});
+
+// error-handling middleware (4 arguments!)
+app.use((err, req, res, next) => {
+  console.log(err.stack);
+  res.status(500).send("something went wrong");
+});
+
+app.listen(3000, () => console.log("Server is now running at port 3000"));
+```
+
+<Callout title="Error middleware">
+  Express treats a middleware with **4 parameters** `(err, req, res, next)` as an error handler.
+  Register it **after** all routes.
+</Callout>
+
+## Quick recap
+
+- `const app = express()`, then `app.get/post/put/delete(path, handler)`, then `app.listen(port)`
+- Route params with `/:id` → `req.params.id`
+- Use `res.json()` for APIs and `res.status(code)` for status codes.
+- `app.set()` for settings. A 4-arg `app.use()` is the error handler.
